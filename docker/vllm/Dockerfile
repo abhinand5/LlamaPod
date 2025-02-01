@@ -5,7 +5,7 @@ LABEL org.opencontainers.image.description="Run any GGUF/AWQ/HF model locally wi
 LABEL org.opencontainers.image.licenses=MIT
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHON_VERSION=3.12
+ENV PYTHON_VERSION=3.11
 ENV PATH="/usr/local/bin:$PATH"
 ENV DATA_DIR="/workspace/.open-webui"
 ENV OPENAI_API_BASE_URL="http://127.0.0.1:8081/v1"
@@ -29,8 +29,11 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 \
     && ln -sf /usr/bin/python3 /usr/bin/python
 
 # Install vLLM and dependencies
-RUN pip install --no-cache-dir --ignore-installed vllm open-webui accelerate \
-    huggingface_hub[cli] hf_transfer
+RUN pip install --no-cache-dir --ignore-installed huggingface_hub[cli] hf_transfer
+
+RUN pip install --no-cache-dir --ignore-installed vllm accelerate
+
+RUN pip install --no-cache-dir --ignore-installed open-webui
 
 RUN apt-get remove -y software-properties-common \
     && apt-get autoremove -y \
@@ -42,10 +45,10 @@ ENV HF_HUB_ENABLE_HF_TRANSFER=1
 WORKDIR /workspace
 
 # Copy scripts and configurations
-COPY docker/scripts/download.py /workspace/download.py
+COPY scripts/download.py /workspace/download.py
 COPY docker/vllm/entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 8080 8081
 
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -61,7 +61,7 @@ ENV DATA_DIR="/workspace/.open-webui"
 ENV OPENAI_API_BASE_URL="http://127.0.0.1:8081/v1"
 
 # Copy scripts
-COPY docker/scripts/download.py /workspace/download.py
+COPY scripts/download.py /workspace/download.py
 COPY docker/llama.cpp/entrypoint.sh /usr/src/entrypoints/entrypoint.sh
 COPY docker/llama.cpp/entrypoint-only-server.sh /usr/src/entrypoints/entrypoint-only-server.sh
 RUN chmod +x /usr/src/entrypoints/entrypoint.sh
