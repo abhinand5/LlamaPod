@@ -1,6 +1,10 @@
 # Builder stage for llama.cpp compilation
 FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
 
+LABEL org.opencontainers.image.source=https://github.com/abhinand5/LlamaPod.git
+LABEL org.opencontainers.image.description="Run any GGUF model locally (or on Cloud) with a ChatGPT-like UI using llama.cpp and Docker"
+LABEL org.opencontainers.image.licenses=MIT
+
 # Install minimal build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git build-essential cmake \
@@ -13,46 +17,56 @@ RUN git clone https://github.com/ggerganov/llama.cpp.git && \
     cmake llama.cpp -B llama.cpp/build -DBUILD_SHARED_LIBS=OFF -DGGML_CUDA=ON -DLLAMA_CURL=ON && \
     cmake --build llama.cpp/build --config Release -j --clean-first --target llama-cli llama-server
 
-# Final stage
-FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04
+# Final stage with only runtime dependencies
+FROM nvcr.io/nvidia/cuda:12.4.1-base-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
 WORKDIR /workspace
 
-# Install runtime dependencies
+# Install runtime dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl libcurl4-openssl-dev \
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa \
+    curl \
+    libcurl4-openssl-dev \
+    software-properties-common
+
+RUN add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update \
-    && apt-get install -y python3.11 python3.11-venv python3.11-dev \
+    && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev
+    
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --set python3 /usr/bin/python3.11 \
+    && ln -sf /usr/bin/python3 /usr/bin/python
+    
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    libcublas-12-4
+
+RUN pip install --no-cache-dir --ignore-installed huggingface_hub[cli] hf_transfer open-webui \
+    && apt-get remove -y software-properties-common \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pip and set Python 3.11 as default
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-    update-alternatives --set python3 /usr/bin/python3.11 && \
-    ln -sf /usr/bin/python3 /usr/bin/python
-
-# Copy llama.cpp binaries from builder stage
+# Copy only necessary files from builder
 COPY --from=builder /build/llama.cpp/build/bin/llama-* /usr/local/bin/
 
-# Install Python dependencies
-RUN pip install --no-cache --ignore-installed huggingface_hub[cli] hf_transfer open-webui
-
+# Set environment variables
 ENV PATH="/usr/local/bin:$PATH"
 ENV DATA_DIR="/workspace/.open-webui"
+ENV OPENAI_API_BASE_URL="http://127.0.0.1:8081/v1"
 
-EXPOSE 8080
-
-# Copy the scripts
+# Copy scripts
 COPY download.py /workspace/download.py
-COPY entrypoint.sh /workspace/entrypoint.sh
+COPY entrypoint.sh /usr/src/entrypoints/entrypoint.sh
+COPY entrypoint-only-server.sh /usr/src/entrypoints/entrypoint-only-server.sh
+RUN chmod +x /usr/src/entrypoints/entrypoint.sh
+RUN chmod +x /usr/src/entrypoints/entrypoint-only-server.sh
 
-# Make entrypoint executable
-RUN chmod +x /workspace/entrypoint.sh
+EXPOSE 8080 8081
 
-ENTRYPOINT ["/workspace/entrypoint.sh"]
-
+ENTRYPOINT ["/usr/src/entrypoints/entrypoint.sh"]
