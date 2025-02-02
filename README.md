@@ -18,6 +18,8 @@ LlamaPod is a powerful, containerized solution for running open-source language 
 
 ## 🚀 Quick Start
 
+### Llama.cpp
+
 ```bash
 docker run -it -p 8080:8080 --gpus all \
   -v $(pwd)/models:/workspace/models \
@@ -33,16 +35,38 @@ Visit:
 - Web UI: http://localhost:8080
 - API Endpoint: http://localhost:8081/v1
 
+#### Using your external DB
+
+If you need persistance, please follow this method. This external DB can be any Postgres instance, even free cloud hosted ones ones like [Supabase](https://supabase.com/docs/guides/database/overview).
+
+```bash
+docker run -it \
+  -p 8080:8080 -p 8081:8081 --gpus all \
+  -v ./models:/workspace/models \
+  -e HF_MODEL_ID="bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF" \
+  -e MODEL_DIR="/workspace/models" \
+  -e MODEL_PATTERN="*f16.gguf" \
+  -e DATABASE_URL="postgres://username:password@postgress-addr:5432/openwebui" \
+  -e MODEL_PATH="/workspace/models/DeepSeek-R1-Distill-Qwen-1.5B-f16.gguf" \
+  --add-host host.docker.internal:host-gateway \
+  ghcr.io/abhinand5/llama-pod \
+  --n-gpu-layers 28 --ctx-size 4096
+```
+
+### vLLM
+
+(To be added)
+
 ## 🛠️ Installation Options
 
 ### Using Pre-built Image
 
 ```bash
-# Pull the latest image
-docker pull ghcr.io/abhinand5/llamapod
+# Pull the latest stable image
+docker pull ghcr.io/abhinand5/llamapod:main
 
-# Or use a specific version
-docker pull ghcr.io/abhinand5/llamapod:v0.1.0
+# Or use a specific version add your desired commit SHA from releases page
+docker pull ghcr.io/abhinand5/llamapod:sha-d5017a7
 ```
 
 ### Building from Source
@@ -50,7 +74,7 @@ docker pull ghcr.io/abhinand5/llamapod:v0.1.0
 ```bash
 git clone https://github.com/abhinand5/LlamaPod.git
 cd LlamaPod
-docker build -t llamapod .
+docker build -f docker/llama.cpp/Dockerfile -t llama-pod .
 ```
 
 ## 🎮 Usage Guide
