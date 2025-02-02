@@ -33,6 +33,17 @@ jobs:
       packages: write
     
     steps:
+      - name: Free disk space
+        run: |
+          # Remove unnecessary large packages and clear apt cache
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          docker system prune -af
+          df -h
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -70,6 +81,13 @@ jobs:
         with:
           context: .
           file: docker/llama.cpp/Dockerfile
+          # Add build args to minimize image size
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          # Compress layers
+          compression: zstd
+          # Use compressed layer format
+          provenance: false
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-llama.outputs.tags }}
           labels: ${{ steps.meta-llama.outputs.labels }}
@@ -120,6 +138,13 @@ jobs:
         with:
           context: .
           file: docker/vllm/Dockerfile
+          # Add build args to minimize image size
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          # Compress layers
+          compression: zstd
+          # Use compressed layer format
+          provenance: false
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-vllm.outputs.tags }}
           labels: ${{ steps.meta-vllm.outputs.labels }}
