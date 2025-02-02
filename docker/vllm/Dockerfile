@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 
 LABEL org.opencontainers.image.source=https://github.com/abhinand5/LlamaPod.git
 LABEL org.opencontainers.image.description="Run any GGUF/AWQ/HF model locally with vLLM backend"
@@ -13,25 +13,35 @@ ENV OPENAI_API_BASE_URL="http://127.0.0.1:8081/v1"
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    software-properties-common
+    software-properties-common \
+    build-essential
 
 RUN add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3.11-venv \
-    python3.11-dev
+    python${PYTHON_VERSION} \
+    python${PYTHON_VERSION}-venv \
+    python${PYTHON_VERSION}-dev
 
 # Set up Python
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python${PYTHON_VERSION} \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
     && update-alternatives --set python3 /usr/bin/python3.11 \
     && ln -sf /usr/bin/python3 /usr/bin/python
 
 # Install vLLM and dependencies
-RUN pip install --no-cache-dir --ignore-installed huggingface_hub[cli] hf_transfer
+RUN pip install --no-cache-dir --ignore-installed \
+    huggingface_hub[cli] hf_transfer
 
-RUN pip install --no-cache-dir --ignore-installed vllm accelerate
+RUN pip install --no-cache-dir --ignore-installed \
+    --extra-index-url torch torchvision torchaudio
+
+RUN apt-get install git -y --no-install-recommends \
+    && git clone --depth=1 https://github.com/vllm-project/vllm.git \
+    && cd vllm \
+    && python use_existing_torch.py \
+    && pip install --no-cache-dir -r requirements-build.txt \
+    && pip install --no-cache-dir -e . --no-build-isolation
 
 RUN pip install --no-cache-dir --ignore-installed open-webui
 
