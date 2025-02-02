@@ -1,7 +1,13 @@
 #!/bin/bash
 
-# Download the model
-python3 /workspace/download.py --repo_id "$REPO_ID" --local_dir "$MODEL_DIR" --patterns "$MODEL_PATTERN"
+# Function to download model if HF repo is specified
+download_model() {
+    if [ ! -z "$HF_MODEL_ID" ]; then
+        echo "Downloading model from Hugging Face: $HF_MODEL_ID"
+        # Download the model
+        python3 /usr/src/download.py --repo_id "$HF_MODEL_ID" --local_dir "$MODEL_DIR" --patterns "$MODEL_PATTERN"
+    fi
+}
 
 # Function to start llama-server
 start_llama_server() {
@@ -33,6 +39,7 @@ cleanup() {
 trap cleanup SIGTERM SIGINT
 
 # Start services
+download_model
 start_llama_server "$@"
 start_open_webui
 

@@ -47,7 +47,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     libcublas-12-4
 
-RUN pip install --no-cache-dir --ignore-installed huggingface_hub[cli] hf_transfer open-webui \
+RUN pip install --no-cache-dir --ignore-installed huggingface_hub[cli] hf_transfer tqdm open-webui \
     && apt-get remove -y software-properties-common \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
@@ -56,12 +56,13 @@ RUN pip install --no-cache-dir --ignore-installed huggingface_hub[cli] hf_transf
 COPY --from=builder /build/llama.cpp/build/bin/llama-* /usr/local/bin/
 
 # Set environment variables
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV PATH="/usr/local/bin:$PATH"
 ENV DATA_DIR="/workspace/.open-webui"
 ENV OPENAI_API_BASE_URL="http://127.0.0.1:8081/v1"
 
 # Copy scripts
-COPY scripts/download.py /workspace/download.py
+COPY scripts/download.py /usr/src/download.py
 COPY docker/llama.cpp/entrypoint.sh /usr/src/entrypoints/entrypoint.sh
 COPY docker/llama.cpp/entrypoint-only-server.sh /usr/src/entrypoints/entrypoint-only-server.sh
 RUN chmod +x /usr/src/entrypoints/entrypoint.sh

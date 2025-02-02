@@ -4,7 +4,8 @@
 download_model() {
     if [ ! -z "$HF_MODEL_ID" ]; then
         echo "Downloading model from Hugging Face: $HF_MODEL_ID"
-        python3 -c "from huggingface_hub import snapshot_download; snapshot_download('$HF_MODEL_ID', local_dir='$MODEL_DIR')"
+        # Download the model
+        python3 /usr/src/download.py --repo_id "$HF_MODEL_ID" --local_dir "$MODEL_DIR" --patterns "$MODEL_PATTERN"
     fi
 }
 
