@@ -34,15 +34,20 @@ RUN pip install --no-cache-dir --ignore-installed \
     huggingface_hub[cli] hf_transfer tqdm
 
 RUN pip install --no-cache-dir --ignore-installed \
-    --extra-index-url torch torchvision torchaudio
+    torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
-RUN pip install --no-cache-dir --ignore-installed vllm
+RUN pip install --no-cache-dir vllm
 
-RUN pip install --no-cache-dir --ignore-installed open-webui
+RUN apt-get remove -y python3-blinker \
+    && apt-get install libgl1 libglib2.0-0 -y \
+    && pip install --no-cache-dir -U blinker \
+    && pip install --no-cache-dir open-webui
 
 RUN apt-get remove -y software-properties-common \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir zipp distro six
 
 # Enable fast downloads from HuggingFace
 ENV HF_HUB_ENABLE_HF_TRANSFER=1

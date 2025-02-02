@@ -47,10 +47,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     libcublas-12-4
 
-RUN pip install --no-cache-dir --ignore-installed huggingface_hub[cli] hf_transfer tqdm open-webui \
+RUN pip install --no-cache-dir huggingface_hub[cli] hf_transfer tqdm \
     && apt-get remove -y software-properties-common \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get remove -y python3-blinker \
+    && pip install --no-cache-dir -U blinker \
+    && pip install --no-cache-dir open-webui
 
 # Copy only necessary files from builder
 COPY --from=builder /build/llama.cpp/build/bin/llama-* /usr/local/bin/
