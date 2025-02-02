@@ -1,7 +1,7 @@
 # Builder stage for llama.cpp compilation
 FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
 
-ARG NUM_CPU_THREADS=0
+ARG NUM_CPU_THREADS=4
 
 LABEL org.opencontainers.image.source=https://github.com/abhinand5/LlamaPod.git
 LABEL org.opencontainers.image.description="Run any GGUF model locally (or on Cloud) with a ChatGPT-like UI using llama.cpp and Docker"
