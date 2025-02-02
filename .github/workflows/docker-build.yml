@@ -27,7 +27,7 @@ env:
 
 jobs:
   build-llama:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04-16core
     permissions:
       contents: read
       packages: write

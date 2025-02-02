@@ -1,6 +1,8 @@
 # Builder stage for llama.cpp compilation
 FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
 
+ARG NUM_CPU_THREADS=0
+
 LABEL org.opencontainers.image.source=https://github.com/abhinand5/LlamaPod.git
 LABEL org.opencontainers.image.description="Run any GGUF model locally (or on Cloud) with a ChatGPT-like UI using llama.cpp and Docker"
 LABEL org.opencontainers.image.licenses=MIT
@@ -13,14 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Build llama.cpp with CUDA support
 WORKDIR /build
-RUN git clone https://github.com/ggerganov/llama.cpp.git && \
-    cmake llama.cpp -B llama.cpp/build \
-    -DBUILD_SHARED_LIBS=ON \
-    -DGGML_CUDA=ON \
-    -DLLAMA_CUDA=ON \
-    -DLLAMA_CUBLAS=ON \
-    -DLLAMA_CURL=ON && \
-    cmake --build llama.cpp/build --config Release -j --target llama-server
+RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp.git && \
+    cmake llama.cpp -B llama.cpp/build -DBUILD_SHARED_LIBS=OFF -DGGML_CUDA=ON -DLLAMA_CURL=ON && \
+    cmake --build llama.cpp/build --config Release -j${NUM_CPU_THREADS} --clean-first --target llama-cli llama-server
 
 # Final stage with runtime dependencies
 FROM nvcr.io/nvidia/cuda:12.4.1-base-ubuntu22.04
