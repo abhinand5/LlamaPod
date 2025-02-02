@@ -21,7 +21,7 @@ LlamaPod is a powerful, containerized solution for running open-source language 
 ```bash
 docker run -it -p 8080:8080 --gpus all \
   -v $(pwd)/models:/workspace/models \
-  -e REPO_ID="bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF" \
+  -e HF_MODEL_ID="bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF" \
   -e MODEL_DIR="/workspace/models" \
   -e MODEL_PATTERN="*f16.gguf" \
   -e MODEL_PATH="/workspace/models/DeepSeek-R1-Distill-Qwen-1.5B-f16.gguf" \
@@ -57,7 +57,7 @@ docker build -t llamapod .
 
 ### Environment Variables
 
-- `REPO_ID`: Hugging Face repository ID (e.g., "unsloth/DeepSeek-R1-GGUF")
+- `HF_MODEL_ID`: Hugging Face repository ID (e.g., "unsloth/DeepSeek-R1-GGUF")
 - `MODEL_DIR`: Directory to store downloaded models
 - `MODEL_PATTERN`: File pattern to match when downloading (e.g., "*Q4_K_M.gguf")
 - `MODEL_PATH`: Full path to the model file

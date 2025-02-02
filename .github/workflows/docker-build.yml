@@ -1,0 +1,167 @@
+name: Build and Publish Docker Images
+
+on:
+  push:
+    branches: [ "main" ]
+    # Trigger on version tags
+    tags: [ 'v*.*.*' ]
+    # Only trigger if Docker-related files change
+    paths:
+      - 'docker/**'
+      - 'scripts/**'
+      - '.github/workflows/docker-build.yml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'docker/**'
+      - 'scripts/**'
+      - '.github/workflows/docker-build.yml'
+  # Allow manual triggers
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # Define image names
+  LLAMA_IMAGE_NAME: ${{ github.repository }}
+  VLLM_IMAGE_NAME: ${{ github.repository }}-vllm
+
+jobs:
+  build-llama:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: true
+          
+          # all of these default to true, but feel free to set to "false" if necessary
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          buildkitd-flags: --debug
+          driver-opts: |
+            image=moby/buildkit:v0.12.0
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for llama.cpp
+        id: meta-llama
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.LLAMA_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push llama.cpp Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/llama.cpp/Dockerfile
+          # Add build args to minimize image size
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          # Use compressed layer format
+          provenance: false
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-llama.outputs.tags }}
+          labels: ${{ steps.meta-llama.outputs.labels }}
+          cache-from: type=gha,scope=llama
+          cache-to: type=gha,mode=max,scope=llama
+
+  build-vllm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: true
+          
+          # all of these default to true, but feel free to set to "false" if necessary
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          buildkitd-flags: --debug
+          driver-opts: |
+            image=moby/buildkit:v0.12.0
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for vLLM
+        id: meta-vllm
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.VLLM_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push vLLM Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/vllm/Dockerfile
+          # Add build args to minimize image size
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          # Use compressed layer format
+          provenance: false
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-vllm.outputs.tags }}
+          labels: ${{ steps.meta-vllm.outputs.labels }}
+          cache-from: type=gha,scope=vllm
+          cache-to: type=gha,mode=max,scope=vllm
