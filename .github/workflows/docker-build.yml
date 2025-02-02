@@ -33,16 +33,20 @@ jobs:
       packages: write
     
     steps:
-      - name: Free disk space
-        run: |
-          # Remove unnecessary large packages and clear apt cache
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo apt-get clean
-          docker system prune -af
-          df -h
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: true
+          
+          # all of these default to true, but feel free to set to "false" if necessary
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -84,8 +88,6 @@ jobs:
           # Add build args to minimize image size
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-          # Compress layers
-          compression: zstd
           # Use compressed layer format
           provenance: false
           push: ${{ github.event_name != 'pull_request' }}
@@ -101,6 +103,21 @@ jobs:
       packages: write
 
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: true
+          
+          # all of these default to true, but feel free to set to "false" if necessary
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -141,8 +158,6 @@ jobs:
           # Add build args to minimize image size
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-          # Compress layers
-          compression: zstd
           # Use compressed layer format
           provenance: false
           push: ${{ github.event_name != 'pull_request' }}
