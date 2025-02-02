@@ -1,34 +1,23 @@
-# Builder stage for llama.cpp compilation
-FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
+# Final stage with prebuilt binaries and runtime dependencies
+FROM nvcr.io/nvidia/cuda:12.4.1-base-ubuntu22.04
+
+ARG LLAMA_CPP_RELEASE="b4615"
 
 LABEL org.opencontainers.image.source=https://github.com/abhinand5/LlamaPod.git
 LABEL org.opencontainers.image.description="Run any GGUF model locally (or on Cloud) with a ChatGPT-like UI using llama.cpp and Docker"
 LABEL org.opencontainers.image.licenses=MIT
 
-# Install minimal build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git build-essential cmake \
-    libcurl4-openssl-dev gcc g++ make \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build llama.cpp
-WORKDIR /build
-RUN git clone https://github.com/ggerganov/llama.cpp.git && \
-    cmake llama.cpp -B llama.cpp/build -DBUILD_SHARED_LIBS=OFF -DGGML_CUDA=ON -DLLAMA_CURL=ON && \
-    cmake --build llama.cpp/build --config Release -j --clean-first --target llama-cli llama-server
-
-# Final stage with only runtime dependencies
-FROM nvcr.io/nvidia/cuda:12.4.1-base-ubuntu22.04
-
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
+ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
 
 WORKDIR /workspace
 
-# Install runtime dependencies in a single layer
+# Install runtime dependencies including unzip
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    libcurl4-openssl-dev \
+    unzip \
+    libcurl4 \
     software-properties-common
 
 RUN add-apt-repository ppa:deadsnakes/ppa \
@@ -52,12 +41,18 @@ RUN pip install --no-cache-dir huggingface_hub[cli] hf_transfer tqdm \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get remove -y python3-blinker \
-    && pip install --no-cache-dir -U blinker \
-    && pip install --no-cache-dir open-webui
+RUN pip install --no-cache-dir \
+    torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
-# Copy only necessary files from builder
-COPY --from=builder /build/llama.cpp/build/bin/llama-* /usr/local/bin/
+RUN pip install --no-cache-dir open-webui
+
+# Download and install prebuilt binaries with shared libraries
+RUN curl -LO https://github.com/ggerganov/llama.cpp/releases/download/${LLAMA_CPP_RELEASE}/llama-${LLAMA_CPP_RELEASE}-bin-ubuntu-x64.zip \
+    && unzip llama-${LLAMA_CPP_RELEASE}-bin-ubuntu-x64.zip -d /tmp \
+    && mv /tmp/build/bin/llama-* /usr/local/bin/ \
+    && mv /tmp/build/bin/*.so /usr/local/lib/ \
+    && ldconfig \
+    && rm -rf /tmp/build llama-${LLAMA_CPP_RELEASE}-bin-ubuntu-x64.zip
 
 # Set environment variables
 ENV HF_HUB_ENABLE_HF_TRANSFER=1
