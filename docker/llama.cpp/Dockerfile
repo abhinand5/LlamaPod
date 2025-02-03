@@ -17,10 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /build
 RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp.git && \
     cmake llama.cpp -B llama.cpp/build -DBUILD_SHARED_LIBS=OFF -DGGML_CUDA=ON -DLLAMA_CURL=ON && \
-    cmake --build llama.cpp/build --config Release -j${NUM_CPU_THREADS} --clean-first --target llama-cli llama-server
+    cmake --build llama.cpp/build --config Release -j${NUM_CPU_THREADS} --clean-first --target llama-server
 
 # Final stage with runtime dependencies
-FROM nvcr.io/nvidia/cuda:12.4.1-base-ubuntu22.04
+FROM nvcr.io/nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
 LABEL org.opencontainers.image.source=https://github.com/abhinand5/LlamaPod.git
 LABEL org.opencontainers.image.description="Run any GGUF model locally (or on Cloud) with a ChatGPT-like UI using llama.cpp and Docker"
@@ -28,7 +28,7 @@ LABEL org.opencontainers.image.licenses=MIT
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
+# ENV LD_LIBRARY_PATH=/usr/local/cuda-12.4/compat:/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 
 WORKDIR /workspace
 
@@ -60,13 +60,13 @@ RUN pip install --no-cache-dir huggingface_hub[cli] hf_transfer tqdm \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+    torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
 
 RUN pip install --no-cache-dir open-webui
 
 # Copy built binaries and libraries from builder stage
 COPY --from=builder /build/llama.cpp/build/bin/llama-* /usr/local/bin/
-COPY --from=builder /build/llama.cpp/build/lib/* /usr/local/lib/
+
 RUN ldconfig
 
 # Set environment variables
