@@ -7,7 +7,7 @@ from huggingface_hub import snapshot_download
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def download_models(repo_id: str, local_dir: str, patterns: list | str | None):
     """

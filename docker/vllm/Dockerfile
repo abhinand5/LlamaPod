@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir --ignore-installed \
 RUN pip install --no-cache-dir --ignore-installed \
     torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
-RUN pip install --no-cache-dir vllm
+RUN pip install --no-cache-dir vllm bitsandbytes
 
 RUN apt-get remove -y python3-blinker \
     && apt-get install libgl1 libglib2.0-0 -y \
